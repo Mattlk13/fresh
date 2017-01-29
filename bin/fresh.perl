@@ -827,10 +827,13 @@ sub main {
     fresh_update(@ARGV);
     fresh_install; # TODO: With latest binary
   } elsif ($arg eq "install") {
+    # TODO: should error if passed any args
     fresh_install;
   } elsif ($arg eq "edit") {
+    # TODO: should error if passed any args
     fresh_edit;
   } elsif ($arg eq "clean") {
+    # TODO: should error if passed any args
     fresh_clean;
   } elsif ($arg eq "search") {
     fresh_search(@ARGV);
