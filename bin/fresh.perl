@@ -83,6 +83,13 @@ SH
     my %options = ();
     GetOptionsFromArray(\@args, \%options, 'marker:s', 'file:s', 'bin:s', 'ref:s', 'filter:s', 'ignore-missing') or croak "Parse error at $entry{file}:$entry{line}\n";
 
+    if ($line =~ /--marker=\s/) {
+      entry_error(\%entry, "Marker not specified.");
+    }
+    if (defined($options{marker}) && !defined($options{file})) {
+      entry_error(\%entry, "--marker is only valid with --file.");
+    }
+
     if ($cmd eq 'fresh') {
       if (@args == 1) {
         $entry{name} = $args[0];

@@ -2140,7 +2140,6 @@ SH
 
   describe '--marker' do
     it 'errors if --marker is empty' do
-      pending
       rc 'fresh foo --file --marker='
 
       run_fresh error: <<-EOF.strip_heredoc
@@ -2153,7 +2152,6 @@ SH
     end
 
     it 'errors if --marker is used without --file' do
-      pending
       rc 'fresh foo --marker'
 
       run_fresh error: <<-EOF.strip_heredoc
@@ -2166,7 +2164,6 @@ SH
     end
 
     it 'errors if --marker is used with --bin' do
-      pending
       rc 'fresh foo --bin --marker'
 
       run_fresh error: <<-EOF.strip_heredoc
