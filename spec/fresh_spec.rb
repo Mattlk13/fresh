@@ -2190,7 +2190,6 @@ SH
 
   describe 'required args' do
     it 'requires a filename' do
-      pending
       rc 'fresh'
 
       run_fresh error: <<-EOF.strip_heredoc

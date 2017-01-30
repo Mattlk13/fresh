@@ -95,7 +95,9 @@ SH
     }
 
     if ($cmd eq 'fresh') {
-      if (@args == 1) {
+      if (@args == 0) {
+        entry_error(\%entry, "Filename is required");
+      } elsif (@args == 1) {
         $entry{name} = $args[0];
       } elsif (@args == 2) {
         $entry{repo} = $args[0];
