@@ -2220,25 +2220,4 @@ SH
       EOF
     end
   end
-
-  describe 'private functions' do
-    let(:log_path) { sandbox_path + 'out.log' }
-
-    def run_private_function(command, exit_status = true)
-      exit_status = system 'bash', '-c', <<-EOF
-        set -e
-        source bin/fresh
-        #{command} > #{log_path}
-      EOF
-      expect(exit_status).to be exit_status
-    end
-
-    describe '_escape' do
-      it 'escapes arguments' do
-        pending
-        run_private_function "_escape foo 'bar baz'"
-        expect(File.read(log_path)).to eq "foo bar\\ baz\n"
-      end
-    end
-  end
 end
