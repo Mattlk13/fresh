@@ -835,6 +835,36 @@ sub fresh_clean_symlinks {
   }
 }
 
+sub fresh_help {
+  print <<EOF;
+Keep your dot files \033[1;32mfresh\033[0m.
+
+The following commands will install/update configuration files
+as specified in your $FRESH_RCFILE file.
+
+See ${\format_url 'http://freshshell.com/readme'} for more documentation.
+
+usage: fresh <command> [<args>]
+
+Available commands:
+    install            Build shell configuration and relevant symlinks (default)
+    update [<filter>]  Update from source repos and rebuild
+    clean              Removes dead symlinks and source repos
+    search <query>     Search the fresh directory
+    edit               Open freshrc for editing
+    show               Show source references for freshrc lines
+    help               Show this help
+EOF
+
+  foreach my $path (split(/:/, $ENV{PATH})) {
+    my @matches = bsd_glob("$path/fresh-*");
+    foreach my $command_path (@matches) {
+      my $command = remove_prefix($command_path, "$path/fresh-");
+      printf "    %-18s %s\n", "$command", "Run $command plugin";
+    }
+  }
+}
+
 sub main {
   my $arg = shift(@ARGV) || "install";
 
@@ -852,6 +882,8 @@ sub main {
     fresh_clean;
   } elsif ($arg eq "search") {
     fresh_search(@ARGV);
+  } elsif ($arg eq "help") {
+    fresh_help;
   } else {
     my $bin_name = "fresh-$arg";
 

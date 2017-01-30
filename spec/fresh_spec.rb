@@ -2107,14 +2107,13 @@ SH
 
   describe 'help' do
     it 'displays the help' do
-      pending
       %w[foo bar].each do |plugin|
         path = bin_path + "fresh-#{plugin}"
         touch path
         FileUtils.chmod '+x', path
       end
 
-      run_fresh command: 'help', env: {'PATH' => "#{bin_path}:/bin:/usr/bin"}, success: <<-EOF.strip_heredoc
+      run_fresh command: 'help', env: {'PATH' => "#{bin_path}:/usr/bin"}, success: <<-EOF.strip_heredoc
         Keep your dot files #{FRESH_HIGHLIGHTED}.
 
         The following commands will install/update configuration files
