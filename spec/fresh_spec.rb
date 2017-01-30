@@ -682,7 +682,6 @@ describe 'fresh' do
       end
 
       it 'errors if no ref is specified' do
-        pending
         rc 'fresh foo --file --ref'
 
         run_fresh error: <<-EOF.strip_heredoc

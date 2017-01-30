@@ -90,6 +90,10 @@ SH
       entry_error(\%entry, "--marker is only valid with --file.");
     }
 
+    if (defined($options{ref}) && $options{ref} eq "") {
+      entry_error(\%entry, "You must specify a Git reference.");
+    }
+
     if (defined($options{file}) && defined($options{bin})) {
       entry_error(\%entry, "Cannot have more than one mode.");
     }
