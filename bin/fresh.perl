@@ -102,8 +102,10 @@ SH
       } elsif (@args == 2) {
         $entry{repo} = $args[0];
         $entry{name} = $args[1];
-      } else {
+      } elsif ($args[2] =~ /^--/) {
         entry_error(\%entry, "Unknown option: $args[2]");
+      } else {
+        entry_error(\%entry, "Expected 1 or 2 args.");
       }
       $entry{options} = {%default_options, %options};
       $entry{env} = {%env};
