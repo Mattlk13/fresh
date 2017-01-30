@@ -680,6 +680,19 @@ describe 'fresh' do
           expect(fresh_path + 'missing').to_not exist
         end
       end
+
+      it 'errors if no ref is specified' do
+        pending
+        rc 'fresh foo --file --ref'
+
+        run_fresh error: <<-EOF.strip_heredoc
+          #{ERROR_PREFIX} You must specify a Git reference.
+          #{freshrc_path}:1: fresh foo --file --ref
+
+          You may need to run `fresh update` if you're adding a new line,
+          or the file you're referencing may have moved or been deleted.
+        EOF
+      end
     end
 
     describe 'whole repos' do
@@ -937,6 +950,38 @@ describe 'fresh' do
         # fresh: aliases/git.sh @ abc1237 # sed s/test/TEST/
 
         TEST data for abc1237:aliases/git.sh
+      EOF
+    end
+
+    it 'runs filters that reference functions from the freshrc' do
+      file_add fresh_local_path + 'aliases', 'foo other_username bar'
+      rc <<-EOF.strip_heredoc
+        replace_username() {
+          sed s/other_username/my_username/ | tr _ -
+        }
+
+        fresh aliases --filter=replace_username
+      EOF
+
+      run_fresh
+
+      expect_shell_sh.to eq <<-EOF.strip_heredoc
+        # fresh: aliases # replace_username
+
+        foo my-username bar
+      EOF
+    end
+
+    it 'errors when no filter is specified' do
+      pending
+      rc 'fresh foo --filter'
+
+      run_fresh error: <<-EOF.strip_heredoc
+        #{ERROR_PREFIX} You must specify a filter program.
+        #{freshrc_path}:1: fresh foo --filter
+
+        You may need to run `fresh update` if you're adding a new line,
+        or the file you're referencing may have moved or been deleted.
       EOF
     end
 
@@ -1435,7 +1480,7 @@ describe 'fresh' do
       let(:path) do
         capture(:stdout) do
           system <<-EOF
-/bin/bash -c "$(
+/usr/bin/env bash -c "$(
 cat <<'SH'
   export PATH=/usr/bin
   source #{shell_sh_path}
@@ -1487,7 +1532,7 @@ SH
 
         path = capture(:stdout) do
           system <<-EOF
-/bin/bash -c "$(
+/usr/bin/env bash -c "$(
 cat <<'SH'
   export PATH=/usr/bin
   source #{shell_sh_path}
@@ -1508,7 +1553,7 @@ SH
         run_fresh
         out = capture(:stdout) do
           system <<-EOF
-/bin/bash -c "$(
+/usr/bin/env bash -c "$(
 cat <<'SH'
   source #{shell_sh_path}
   echo "$__FRESH_BIN_PATH__"
@@ -1920,6 +1965,46 @@ SH
         )
       end
     end
+
+    describe 'confirmation prompt' do
+      it 'negative' do
+        pending
+        touch fresh_path + 'source/user/repo/file'
+        touch fresh_local_path + 'new file'
+
+        run_fresh(
+          full_command: 'echo n | fresh new\ file',
+          success: <<-EOF.strip_heredoc)
+            Add `fresh new\\ file` to #{freshrc_path} [Y/n]? #{NOTE_PREFIX} Use `fresh edit` to manually edit your #{freshrc_path}.
+          EOF
+      end
+
+      it 'default' do
+        pending
+        touch fresh_path + 'source/user/repo/file'
+        touch fresh_local_path + 'new file'
+
+        run_fresh(
+          full_command: 'echo | fresh new\ file',
+          success: <<-EOF.strip_heredoc)
+            Add `fresh new\\ file` to #{freshrc_path} [Y/n]? Adding `fresh new\\ file` to #{freshrc_path}...
+            #{FRESH_SUCCESS_LINE}
+          EOF
+      end
+
+      it 'invalid' do
+        pending
+        touch fresh_path + 'source/user/repo/file'
+        touch fresh_local_path + 'new file'
+
+        run_fresh(
+          full_command: 'echo -e "blah\ny" | fresh new\ file',
+          success: <<-EOF.strip_heredoc)
+            Add `fresh new\\ file` to #{freshrc_path} [Y/n]? Add `fresh new\\ file` to #{freshrc_path} [Y/n]? Adding `fresh new\\ file` to #{freshrc_path}...
+            #{FRESH_SUCCESS_LINE}
+          EOF
+      end
+    end
   end
 
   describe 'edit' do
@@ -2020,6 +2105,122 @@ SH
     end
   end
 
+  describe 'help' do
+    it 'displays the help' do
+      pending
+      %w[foo bar].each do |plugin|
+        path = bin_path + "fresh-#{plugin}"
+        touch path
+        FileUtils.chmod '+x', path
+      end
+
+      run_fresh command: 'help', env: {'PATH' => "#{bin_path}:/bin:/usr/bin"}, success: <<-EOF.strip_heredoc
+        Keep your dot files #{FRESH_HIGHLIGHTED}.
+
+        The following commands will install/update configuration files
+        as specified in your #{freshrc_path} file.
+
+        See #{format_url 'http://freshshell.com/readme'} for more documentation.
+
+        usage: fresh <command> [<args>]
+
+        Available commands:
+            install            Build shell configuration and relevant symlinks (default)
+            update [<filter>]  Update from source repos and rebuild
+            clean              Removes dead symlinks and source repos
+            search <query>     Search the fresh directory
+            edit               Open freshrc for editing
+            show               Show source references for freshrc lines
+            help               Show this help
+            bar                Run bar plugin
+            foo                Run foo plugin
+      EOF
+    end
+  end
+
+  describe '--marker' do
+    it 'errors if --marker is empty' do
+      pending
+      rc 'fresh foo --file --marker='
+
+      run_fresh error: <<-EOF.strip_heredoc
+        #{ERROR_PREFIX} Marker not specified.
+        #{freshrc_path}:1: fresh foo --file --marker=
+
+        You may need to run `fresh update` if you're adding a new line,
+        or the file you're referencing may have moved or been deleted.
+      EOF
+    end
+
+    it 'errors if --marker is used without --file' do
+      pending
+      rc 'fresh foo --marker'
+
+      run_fresh error: <<-EOF.strip_heredoc
+        #{ERROR_PREFIX} --marker is only valid with --file.
+        #{freshrc_path}:1: fresh foo --marker
+
+        You may need to run `fresh update` if you're adding a new line,
+        or the file you're referencing may have moved or been deleted.
+      EOF
+    end
+
+    it 'errors if --marker is used with --bin' do
+      pending
+      rc 'fresh foo --bin --marker'
+
+      run_fresh error: <<-EOF.strip_heredoc
+        #{ERROR_PREFIX} --marker is only valid with --file.
+        #{freshrc_path}:1: fresh foo --bin --marker
+
+        You may need to run `fresh update` if you're adding a new line,
+        or the file you're referencing may have moved or been deleted.
+      EOF
+    end
+  end
+
+  it 'errors if more than one mode is specifed' do
+    pending
+    rc 'fresh foo --file --bin'
+
+    run_fresh error: <<-EOF.strip_heredoc
+      #{ERROR_PREFIX} Cannot have more than one mode.
+      #{freshrc_path}:1: fresh foo --file --bin
+
+      You may need to run `fresh update` if you're adding a new line,
+      or the file you're referencing may have moved or been deleted.
+    EOF
+  end
+
+  describe 'required args' do
+    it 'requires a filename' do
+      pending
+      rc 'fresh'
+
+      run_fresh error: <<-EOF.strip_heredoc
+        #{ERROR_PREFIX} Filename is required
+        #{freshrc_path}:1: fresh
+
+        You may need to run `fresh update` if you're adding a new line,
+        or the file you're referencing may have moved or been deleted.
+      EOF
+    end
+
+    it 'errors with too many args' do
+      pending
+      rc 'fresh foo bar baz'
+
+      run_fresh error: <<-EOF.strip_heredoc
+        #{ERROR_PREFIX} Expected 1 or 2 args.
+        #{freshrc_path}:1: fresh foo bar baz
+
+        You may need to run `fresh update` if you're adding a new line,
+        or the file you're referencing may have moved or been deleted.
+        Have a look at the repo: <#{format_url 'https://github.com/foo'}>
+      EOF
+    end
+  end
+
   describe 'private functions' do
     let(:log_path) { sandbox_path + 'out.log' }
 
@@ -2037,198 +2238,6 @@ SH
         pending
         run_private_function "_escape foo 'bar baz'"
         expect(File.read(log_path)).to eq "foo bar\\ baz\n"
-      end
-    end
-
-    describe '_confirm' do
-      it 'confirms query positive' do
-        pending
-        run_private_function "echo y | _confirm 'Test question'"
-        expect(File.read(log_path)).to eq 'Test question [Y/n]? '
-      end
-
-      it 'confirms query negative' do
-        pending
-        run_private_function "echo n | _confirm 'Test question'", false
-        expect(File.read(log_path)).to eq 'Test question [Y/n]? '
-      end
-
-      it 'confirms query default' do
-        pending
-        run_private_function "echo | _confirm 'Test question'"
-        expect(File.read(log_path)).to eq 'Test question [Y/n]? '
-      end
-
-      it 'confirms query invalid' do
-        pending
-        run_private_function %Q{echo -e "blah\ny" | _confirm 'Test question'}
-        expect(File.read(log_path)).to eq 'Test question [Y/n]? Test question [Y/n]? '
-      end
-    end
-
-    describe '_parse_fresh_dsl_args' do
-      def expect_parse_fresh_dsl_args(command)
-        @stdout = capture(:stdout) do
-          @stderr = capture(:stderr) do
-            exit_status = system 'bash', '-c', <<-EOF
-              set -e
-              source bin/fresh
-              _dsl_fresh_options # init defaults
-              _parse_fresh_dsl_args #{command}
-              echo REPO_NAME="$REPO_NAME"
-              echo FILE_NAME="$FILE_NAME"
-              echo MODE="$MODE"
-              echo MODE_ARG="$MODE_ARG"
-              echo REF="$REF"
-              echo MARKER="$MARKER"
-              echo FILTER="$FILTER"
-            EOF
-            puts "EXIT_STATUS=#{exit_status ? 0 : 1}"
-          end
-        end
-        expect(@stderr + @stdout)
-      end
-
-      it 'parses fresh dsl args' do
-        pending
-        expect_parse_fresh_dsl_args('aliases/git.sh').to eq <<-EOF.strip_heredoc
-          REPO_NAME=
-          FILE_NAME=aliases/git.sh
-          MODE=
-          MODE_ARG=
-          REF=
-          MARKER=
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args('twe4ked/dotfiles lib/tmux.conf --file=~/.tmux.conf').to eq <<-EOF.strip_heredoc
-          REPO_NAME=twe4ked/dotfiles
-          FILE_NAME=lib/tmux.conf
-          MODE=file
-          MODE_ARG=~/.tmux.conf
-          REF=
-          MARKER=
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args('jasoncodes/dotfiles .gitconfig --file').to eq <<-EOF.strip_heredoc
-          REPO_NAME=jasoncodes/dotfiles
-          FILE_NAME=.gitconfig
-          MODE=file
-          MODE_ARG=
-          REF=
-          MARKER=
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args('sedmv --bin').to eq <<-EOF.strip_heredoc
-          REPO_NAME=
-          FILE_NAME=sedmv
-          MODE=bin
-          MODE_ARG=
-          REF=
-          MARKER=
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args('scripts/pidof.sh --bin=~/bin/pidof').to eq <<-EOF.strip_heredoc
-          REPO_NAME=
-          FILE_NAME=scripts/pidof.sh
-          MODE=bin
-          MODE_ARG=~/bin/pidof
-          REF=
-          MARKER=
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args('twe4ked/dotfiles lib/tmux.conf --file=~/.tmux.conf --ref=abc1237').to eq <<-EOF.strip_heredoc
-          REPO_NAME=twe4ked/dotfiles
-          FILE_NAME=lib/tmux.conf
-          MODE=file
-          MODE_ARG=~/.tmux.conf
-          REF=abc1237
-          MARKER=
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args('tmux.conf --file --marker').to eq <<-EOF.strip_heredoc
-          REPO_NAME=
-          FILE_NAME=tmux.conf
-          MODE=file
-          MODE_ARG=
-          REF=
-          MARKER=#
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args(%Q{vimrc --file --marker='"'}).to eq <<-EOF.strip_heredoc
-          REPO_NAME=
-          FILE_NAME=vimrc
-          MODE=file
-          MODE_ARG=
-          REF=
-          MARKER="
-          FILTER=
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args(%Q{vimrc --file --filter='sed s/nmap/nnoremap/'}).to eq <<-EOF.strip_heredoc
-          REPO_NAME=
-          FILE_NAME=vimrc
-          MODE=file
-          MODE_ARG=
-          REF=
-          MARKER=
-          FILTER=sed s/nmap/nnoremap/
-          EXIT_STATUS=0
-        EOF
-
-        expect_parse_fresh_dsl_args('foo --file --marker=').to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} Marker not specified.
-          EXIT_STATUS=1
-        EOF
-
-        expect_parse_fresh_dsl_args('foo --bin --marker').to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} --marker is only valid with --file.
-          EXIT_STATUS=1
-        EOF
-
-        expect_parse_fresh_dsl_args(%Q{foo --marker=';'}).to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} --marker is only valid with --file.
-          EXIT_STATUS=1
-        EOF
-
-        expect_parse_fresh_dsl_args('foo --file --ref').to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} You must specify a Git reference.
-          EXIT_STATUS=1
-        EOF
-
-        expect_parse_fresh_dsl_args('foo --filter').to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} You must specify a filter program.
-          EXIT_STATUS=1
-        EOF
-
-        expect_parse_fresh_dsl_args('foo --file --bin').to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} Cannot have more than one mode.
-          EXIT_STATUS=1
-        EOF
-
-        expect_parse_fresh_dsl_args(nil).to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} Filename is required
-          EXIT_STATUS=1
-        EOF
-
-        expect_parse_fresh_dsl_args('foo bar baz').to eq <<-EOF.strip_heredoc
-          #{ERROR_PREFIX} Expected 1 or 2 args.
-          EXIT_STATUS=1
-        EOF
       end
     end
   end

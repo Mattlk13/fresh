@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Install fresh with the following command:
 #
-#   bash -c "`curl -sL get.freshshell.com`"
+#   bash -c "`curl -sL https://get.freshshell.com`"
 
 set -e
 
