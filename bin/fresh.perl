@@ -90,6 +90,10 @@ SH
       entry_error(\%entry, "--marker is only valid with --file.");
     }
 
+    if (defined($options{file}) && defined($options{bin})) {
+      entry_error(\%entry, "Cannot have more than one mode.");
+    }
+
     if ($cmd eq 'fresh') {
       if (@args == 1) {
         $entry{name} = $args[0];

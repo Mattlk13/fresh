@@ -2177,7 +2177,6 @@ SH
   end
 
   it 'errors if more than one mode is specifed' do
-    pending
     rc 'fresh foo --file --bin'
 
     run_fresh error: <<-EOF.strip_heredoc
