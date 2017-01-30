@@ -94,6 +94,10 @@ SH
       entry_error(\%entry, "You must specify a Git reference.");
     }
 
+    if (defined($options{filter}) && $options{filter} eq "") {
+      entry_error(\%entry, "You must specify a filter program.");
+    }
+
     if (defined($options{file}) && defined($options{bin})) {
       entry_error(\%entry, "Cannot have more than one mode.");
     }

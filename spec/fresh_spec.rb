@@ -972,7 +972,6 @@ describe 'fresh' do
     end
 
     it 'errors when no filter is specified' do
-      pending
       rc 'fresh foo --filter'
 
       run_fresh error: <<-EOF.strip_heredoc
