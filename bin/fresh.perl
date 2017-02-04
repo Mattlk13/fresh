@@ -567,12 +567,7 @@ EOF
     my $base_entry_name = dirname($full_entry_name);
 
     if ($$entry{options}{ref}) {
-      if ($$entry{name} =~ /\*/) {
-        # TODO: Save .fresh-order to a temp file and actually use it!
-        my $dir = dirname($$entry{name});
-        read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$dir/.fresh-order")
-      }
-
+      $base_entry_name = dirname($$entry{name});
       @paths = split(/\n/, read_cwd_cmd($prefix, 'git', 'ls-tree', '-r', '--name-only', $$entry{options}{ref}));
       if ($is_dir_target) {
         if ($$entry{name} ne ".") {
@@ -596,7 +591,19 @@ EOF
       @paths = bsd_glob($full_entry_name);
     }
 
-    if (my $fresh_order_data = readfile($base_entry_name . '/.fresh-order')) {
+    my $fresh_order_data;
+    if ($$entry{options}{ref}) {
+      if ($$entry{name} =~ /\*/) {
+        my $dir = dirname($$entry{name});
+        $fresh_order_data = read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$dir/.fresh-order");
+      }
+    } else {
+      $fresh_order_data = readfile($base_entry_name . '/.fresh-order');
+    }
+
+    @paths = sort @paths;
+
+    if ($fresh_order_data) {
       my @order_lines = map { "$base_entry_name/$_" } split(/\n/, $fresh_order_data);
       my $path_index = sub {
         my ($path) = @_;
@@ -607,8 +614,6 @@ EOF
       @paths = sort {
         $path_index->($a) <=> $path_index->($b);
       } @paths;
-    } else {
-      @paths = sort @paths;
     }
 
     for my $path (@paths) {
