@@ -133,6 +133,10 @@ SH
       if (defined($options{file}) && $options{file} !~ /\/$/) {
         entry_error(\%entry, "Whole repositories require destination to be a directory.");
       }
+
+      if (!defined($options{file})) {
+        entry_error(\%entry, "Whole repositories can only be sourced in file mode.");
+      }
     }
   }
   close $output_fh;

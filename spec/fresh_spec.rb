@@ -761,7 +761,6 @@ describe 'fresh' do
         end
 
         it 'errors when missing --file' do
-          pending
           rc 'fresh repo/name .'
           run_fresh error_title: <<-EOF.strip_heredoc
             #{ERROR_PREFIX} Whole repositories can only be sourced in file mode.
