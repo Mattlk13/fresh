@@ -562,7 +562,15 @@ EOF
       }
     } elsif ($is_dir_target) {
       my $wanted = sub {
-        push @paths, $_;
+        if ($$entry{name} eq ".") {
+          # TODO: the ./.git part seems strange here.
+          # We probably need to make sure the test data is good.
+          if (! prefix_match($_, "$prefix./.git")) {
+            push @paths, $_;
+          }
+        } else {
+          push @paths, $_;
+        }
       };
       find({wanted => $wanted, no_chdir => 1}, $full_entry_name);
     } else {

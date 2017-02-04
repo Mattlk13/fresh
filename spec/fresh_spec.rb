@@ -700,7 +700,6 @@ describe 'fresh' do
       end
 
       it 'links directory of generic files for whole repo' do
-        pending
         rc 'fresh repo/name . --file=~/.foo/'
 
         file_add fresh_path + 'source/repo/name/file1', 'file1'
