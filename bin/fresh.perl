@@ -923,6 +923,7 @@ sub main {
   } elsif ($arg eq "search") {
     fresh_search(@ARGV);
   } elsif ($arg eq "help") {
+    # TODO: should error if passed any args
     fresh_help;
   } else {
     my $bin_name = "fresh-$arg";
