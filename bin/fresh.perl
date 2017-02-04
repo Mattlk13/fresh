@@ -584,9 +584,7 @@ EOF
     } elsif ($is_dir_target) {
       my $wanted = sub {
         if ($$entry{name} eq ".") {
-          # TODO: the ./.git part seems strange here.
-          # We probably need to make sure the test data is good.
-          if (! prefix_match($_, "$prefix./.git")) {
+          if (!prefix_match($_, "$full_entry_name/.git")) {
             push @paths, $_;
           }
         } else {
