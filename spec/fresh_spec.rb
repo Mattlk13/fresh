@@ -768,7 +768,6 @@ describe 'fresh' do
         end
 
         it 'errors when missing repo' do
-          pending
           rc 'fresh . --file=~/.bad-local/'
           run_fresh error_title: <<-EOF.strip_heredoc
             #{ERROR_PREFIX} Cannot source whole of local dotfiles.

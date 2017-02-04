@@ -545,6 +545,9 @@ EOF
       $prefix = "$repo_dir/";
     } else {
       $prefix = "$FRESH_LOCAL/";
+      if ($$entry{name} eq ".") {
+        fatal_error("Cannot source whole of local dotfiles.");
+      }
     }
 
     my $matched = 0;
