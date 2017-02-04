@@ -747,7 +747,6 @@ describe 'fresh' do
         end
 
         it 'errors with an invalid path to --file' do
-          pending
           rc 'fresh repo/name . --file=~/.bad-path'
           run_fresh error_title: <<-EOF.strip_heredoc
             #{ERROR_PREFIX} Whole repositories require destination to be a directory.
@@ -755,7 +754,6 @@ describe 'fresh' do
         end
 
         it 'errors when missing path to --file' do
-          pending
           rc 'fresh repo/name . --file'
           run_fresh error_title: <<-EOF.strip_heredoc
             #{ERROR_PREFIX} Whole repositories require destination to be a directory.

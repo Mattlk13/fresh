@@ -128,6 +128,12 @@ SH
     } else {
       croak "Unknown command: $cmd";
     }
+
+    if (defined($entry{name}) && $entry{name} eq ".") {
+      if (defined($options{file}) && $options{file} !~ /\/$/) {
+        entry_error(\%entry, "Whole repositories require destination to be a directory.");
+      }
+    }
   }
   close $output_fh;
 
