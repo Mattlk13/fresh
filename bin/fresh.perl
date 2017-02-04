@@ -1,5 +1,9 @@
 #!/usr/bin/env perl
 
+# TODO: remove this debug
+# use Data::Dumper;
+# print Dumper(\$entry);
+
 use strict;
 use warnings FATAL => 'all';
 
@@ -503,10 +507,6 @@ sub fresh_install {
   append "$FRESH_PATH/build.new/shell.sh", "export FRESH_PATH=\"$FRESH_PATH\"\n";
 
   for my $entry (read_freshrc()) {
-    # TODO: remove this debug
-    # use Data::Dumper;
-    # print Dumper(\$entry);
-
     my $prefix;
     if ($$entry{repo}) {
       # TODO: Not sure if we need $repo_dir as the only difference from $prefix
