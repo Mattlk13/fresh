@@ -723,7 +723,6 @@ describe 'fresh' do
       end
 
       it 'links directory of generic files for whole repo with ref' do
-        pending
         rc 'fresh repo/name . --file=~/.foo/ --ref=abc123'
 
         run_fresh

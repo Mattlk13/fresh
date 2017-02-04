@@ -569,7 +569,9 @@ EOF
 
       @paths = split(/\n/, read_cwd_cmd($prefix, 'git', 'ls-tree', '-r', '--name-only', $$entry{options}{ref}));
       if ($is_dir_target) {
-        @paths = prefix_filter("$$entry{name}/", @paths);
+        if ($$entry{name} ne ".") {
+          @paths = prefix_filter("$$entry{name}/", @paths);
+        }
       } else {
         @paths = glob_filter("$$entry{name}", @paths);
       }
@@ -619,6 +621,9 @@ EOF
             $build_name = $build_name =~ s/(?<!^~)[\/ ()]+/-/gr =~ s/-$//r;
           }
           if ($is_dir_target) {
+            if ($$entry{name} eq ".") {
+              $build_name .= "/";
+            }
             $build_name .= remove_prefix($name, $$entry{name});
           }
         } elsif (defined($$entry{options}{bin})) {
