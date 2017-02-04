@@ -496,6 +496,61 @@ sub repo_name_from_source_path {
   join('/', @parts[-2..-1]);
 }
 
+sub get_entry_prefix {
+  my ($entry) = @_;
+
+  my $prefix;
+  if ($$entry{repo}) {
+    # TODO: Not sure if we need $repo_dir as the only difference from $prefix
+    # is the trailing slash. I don't want to change the specs though.
+    my $repo_name = repo_name($$entry{repo});
+    my $repo_dir = "$FRESH_PATH/source/$repo_name";
+
+    if (-d "$FRESH_LOCAL/.git" && $FRESH_NO_LOCAL_CHECK) {
+      my $old_cwd = getcwd();
+      chdir($FRESH_LOCAL) or croak "$!: $FRESH_LOCAL";
+      my $upstream_branch = `git rev-parse --abbrev-ref --symbolic-full-name \@{u} 2> /dev/null`;
+      chdir($old_cwd) or croak "$!: $old_cwd";
+
+      my @parts = split(/\//, $upstream_branch);
+      my $upstream_remote = $parts[0];
+
+      if (defined($upstream_remote)) {
+        my $local_repo_url = read_cwd_cmd($FRESH_LOCAL, "git", "config", "--get", "remote.$upstream_remote.url");
+        chomp($local_repo_url);
+
+        my $local_repo_name = repo_name($local_repo_url);
+        my $source_repo_name = repo_name($$entry{repo});
+
+        if ($local_repo_name eq $source_repo_name) {
+          entry_note $entry, "You seem to be sourcing your local files remotely.", <<EOF;
+You can remove "$$entry{repo}" when sourcing from your local dotfiles repo (${FRESH_LOCAL}).
+Use `fresh file` instead of `fresh $$entry{repo} file`.
+
+To disable this warning, add `FRESH_NO_LOCAL_CHECK=true` in your freshrc file.
+EOF
+          $FRESH_NO_LOCAL_CHECK = 0;
+        }
+      }
+    }
+
+    make_path dirname($repo_dir);
+
+    if (! -d $repo_dir) {
+      system('git', 'clone', repo_url($$entry{repo}), $repo_dir) == 0 or croak 'git clone failed';
+    }
+
+    $prefix = "$repo_dir/";
+  } else {
+    $prefix = "$FRESH_LOCAL/";
+    if ($$entry{name} eq ".") {
+      fatal_error("Cannot source whole of local dotfiles.");
+    }
+  }
+
+  return $prefix;
+}
+
 sub fresh_install {
   umask 0077;
   remove_tree "$FRESH_PATH/build.new";
@@ -507,54 +562,7 @@ sub fresh_install {
   append "$FRESH_PATH/build.new/shell.sh", "export FRESH_PATH=\"$FRESH_PATH\"\n";
 
   for my $entry (read_freshrc()) {
-    my $prefix;
-    if ($$entry{repo}) {
-      # TODO: Not sure if we need $repo_dir as the only difference from $prefix
-      # is the trailing slash. I don't want to change the specs though.
-      my $repo_name = repo_name($$entry{repo});
-      my $repo_dir = "$FRESH_PATH/source/$repo_name";
-
-      if (-d "$FRESH_LOCAL/.git" && $FRESH_NO_LOCAL_CHECK) {
-        my $old_cwd = getcwd();
-        chdir($FRESH_LOCAL) or croak "$!: $FRESH_LOCAL";
-        my $upstream_branch = `git rev-parse --abbrev-ref --symbolic-full-name \@{u} 2> /dev/null`;
-        chdir($old_cwd) or croak "$!: $old_cwd";
-
-        my @parts = split(/\//, $upstream_branch);
-        my $upstream_remote = $parts[0];
-
-        if (defined($upstream_remote)) {
-          my $local_repo_url = read_cwd_cmd($FRESH_LOCAL, "git", "config", "--get", "remote.$upstream_remote.url");
-          chomp($local_repo_url);
-
-          my $local_repo_name = repo_name($local_repo_url);
-          my $source_repo_name = repo_name($$entry{repo});
-
-          if ($local_repo_name eq $source_repo_name) {
-            entry_note $entry, "You seem to be sourcing your local files remotely.", <<EOF;
-You can remove "$$entry{repo}" when sourcing from your local dotfiles repo (${FRESH_LOCAL}).
-Use `fresh file` instead of `fresh $$entry{repo} file`.
-
-To disable this warning, add `FRESH_NO_LOCAL_CHECK=true` in your freshrc file.
-EOF
-            $FRESH_NO_LOCAL_CHECK = 0;
-          }
-        }
-      }
-
-      make_path dirname($repo_dir);
-
-      if (! -d $repo_dir) {
-        system('git', 'clone', repo_url($$entry{repo}), $repo_dir) == 0 or croak 'git clone failed';
-      }
-
-      $prefix = "$repo_dir/";
-    } else {
-      $prefix = "$FRESH_LOCAL/";
-      if ($$entry{name} eq ".") {
-        fatal_error("Cannot source whole of local dotfiles.");
-      }
-    }
+    my $prefix = get_entry_prefix($entry);
 
     my $matched = 0;
 
