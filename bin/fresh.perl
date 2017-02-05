@@ -636,7 +636,7 @@ sub fresh_install {
     my $matched = 0;
 
     for my $path (@paths) {
-      unless (-d $path || $path =~ /\/\.fresh-order$/) {
+      unless ($path =~ /\/\.fresh-order$/) {
         my $name = remove_prefix($path, $prefix);
 
         my ($build_name, $link_path, $marker);
