@@ -1780,7 +1780,6 @@ SH
 
   describe 'adding lines to freshrc interactively' do
     it 'for local files' do
-      pending
       rc 'fresh existing'
       touch fresh_path + 'source/user/repo/file'
       touch fresh_local_path + 'existing'
@@ -1980,7 +1979,6 @@ SH
       end
 
       it 'default' do
-        pending
         touch fresh_path + 'source/user/repo/file'
         touch fresh_local_path + 'new file'
 

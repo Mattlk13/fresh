@@ -1034,6 +1034,18 @@ EOF
   }
 }
 
+sub fresh_add {
+  my ($arg) = @_;
+
+  my $line = "fresh ${\quotemeta($arg)}";
+
+  print "Add `$line` to $FRESH_RCFILE [Y/n]? ";
+  print "Adding `$line` to $FRESH_RCFILE...\n";
+
+  append $FRESH_RCFILE, "$line\n";
+  fresh_install;
+}
+
 sub main {
   my $arg = shift(@ARGV) || "install";
 
@@ -1060,10 +1072,14 @@ sub main {
   } else {
     my $bin_name = "fresh-$arg";
 
-    if (system("which ${\quotemeta($bin_name)} > /dev/null 2> /dev/null") == 0) {
-      exec($bin_name, @ARGV) or croak "$!";
+    if (-e "$FRESH_LOCAL/$arg") {
+      fresh_add($arg);
     } else {
-      fatal_error "Unknown command: $arg";
+      if (system("which ${\quotemeta($bin_name)} > /dev/null 2> /dev/null") == 0) {
+        exec($bin_name, @ARGV) or croak "$!";
+      } else {
+        fatal_error "Unknown command: $arg";
+      }
     }
   }
 }
