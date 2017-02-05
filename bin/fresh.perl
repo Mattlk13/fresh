@@ -551,6 +551,70 @@ EOF
   return $prefix;
 }
 
+sub get_entry_paths {
+  my ($entry, $prefix) = @_;
+
+  my @paths;
+
+  my $is_dir_target = defined($$entry{options}{file}) && $$entry{options}{file} =~ /\/$/;
+  my $is_external_target = defined($$entry{options}{file}) && $$entry{options}{file} =~ /^[\/~]/;
+
+  my $full_entry_name = "$prefix$$entry{name}";
+  my $base_entry_name = dirname($full_entry_name);
+
+  if ($$entry{options}{ref}) {
+    $base_entry_name = dirname($$entry{name});
+    @paths = split(/\n/, read_cwd_cmd($prefix, 'git', 'ls-tree', '-r', '--name-only', $$entry{options}{ref}));
+    if ($is_dir_target) {
+      if ($$entry{name} ne ".") {
+        @paths = prefix_filter("$$entry{name}/", @paths);
+      }
+    } else {
+      @paths = glob_filter("$$entry{name}", @paths);
+    }
+  } elsif ($is_dir_target) {
+    my $wanted = sub {
+      if ($$entry{name} eq ".") {
+        if (!prefix_match($_, "$full_entry_name/.git")) {
+          push @paths, $_;
+        }
+      } else {
+        push @paths, $_;
+      }
+    };
+    find({wanted => $wanted, no_chdir => 1}, $full_entry_name);
+  } else {
+    @paths = bsd_glob($full_entry_name);
+  }
+
+  my $fresh_order_data;
+  if ($$entry{options}{ref}) {
+    if ($$entry{name} =~ /\*/) {
+      my $dir = dirname($$entry{name});
+      $fresh_order_data = read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$dir/.fresh-order");
+    }
+  } else {
+    $fresh_order_data = readfile($base_entry_name . '/.fresh-order');
+  }
+
+  @paths = sort @paths;
+
+  if ($fresh_order_data) {
+    my @order_lines = map { "$base_entry_name/$_" } split(/\n/, $fresh_order_data);
+    my $path_index = sub {
+      my ($path) = @_;
+      my ($index) = grep { $order_lines[$_] eq $path } 0..$#order_lines;
+      $index = 1e6 unless defined($index);
+      $index;
+    };
+    @paths = sort {
+      $path_index->($a) <=> $path_index->($b);
+    } @paths;
+  }
+
+  return @paths;
+}
+
 sub fresh_install {
   umask 0077;
   remove_tree "$FRESH_PATH/build.new";
@@ -564,65 +628,12 @@ sub fresh_install {
   for my $entry (read_freshrc()) {
     my $prefix = get_entry_prefix($entry);
 
-    my $matched = 0;
-
-    my @paths;
+    my @paths = get_entry_paths($entry, $prefix);
 
     my $is_dir_target = defined($$entry{options}{file}) && $$entry{options}{file} =~ /\/$/;
     my $is_external_target = defined($$entry{options}{file}) && $$entry{options}{file} =~ /^[\/~]/;
 
-    my $full_entry_name = "$prefix$$entry{name}";
-    my $base_entry_name = dirname($full_entry_name);
-
-    if ($$entry{options}{ref}) {
-      $base_entry_name = dirname($$entry{name});
-      @paths = split(/\n/, read_cwd_cmd($prefix, 'git', 'ls-tree', '-r', '--name-only', $$entry{options}{ref}));
-      if ($is_dir_target) {
-        if ($$entry{name} ne ".") {
-          @paths = prefix_filter("$$entry{name}/", @paths);
-        }
-      } else {
-        @paths = glob_filter("$$entry{name}", @paths);
-      }
-    } elsif ($is_dir_target) {
-      my $wanted = sub {
-        if ($$entry{name} eq ".") {
-          if (!prefix_match($_, "$full_entry_name/.git")) {
-            push @paths, $_;
-          }
-        } else {
-          push @paths, $_;
-        }
-      };
-      find({wanted => $wanted, no_chdir => 1}, $full_entry_name);
-    } else {
-      @paths = bsd_glob($full_entry_name);
-    }
-
-    my $fresh_order_data;
-    if ($$entry{options}{ref}) {
-      if ($$entry{name} =~ /\*/) {
-        my $dir = dirname($$entry{name});
-        $fresh_order_data = read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$dir/.fresh-order");
-      }
-    } else {
-      $fresh_order_data = readfile($base_entry_name . '/.fresh-order');
-    }
-
-    @paths = sort @paths;
-
-    if ($fresh_order_data) {
-      my @order_lines = map { "$base_entry_name/$_" } split(/\n/, $fresh_order_data);
-      my $path_index = sub {
-        my ($path) = @_;
-        my ($index) = grep { $order_lines[$_] eq $path } 0..$#order_lines;
-        $index = 1e6 unless defined($index);
-        $index;
-      };
-      @paths = sort {
-        $path_index->($a) <=> $path_index->($b);
-      } @paths;
-    }
+    my $matched = 0;
 
     for my $path (@paths) {
       unless (-d $path || $path =~ /\/\.fresh-order$/) {
