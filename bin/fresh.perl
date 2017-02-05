@@ -78,11 +78,40 @@ SH
 
   while (my $line = <$output_fh>) {
     my @args = shellwords($line);
-    $line =~ s/^.* fresh /fresh /;
+
+    my %entry = parse_fresh_dsl_args($line, @args);
+
+    # use Data::Dumper;
+    # print Dumper(\%entry);
+
+    push @entries, \%entry;
+  }
+  close $output_fh;
+
+  unlink $script_filename;
+  unlink $output_filename;
+
+  return @entries;
+}
+
+sub parse_fresh_dsl_args {
+  my ($line, @args) = @_;
+
+  my %default_options;
+  my %env;
+  # print "x\n";
+  # use Data::Dumper;
+  # print Dumper(\@args);
+
+  # my %entry;
+
+  # indent
+    (my $clean_line = $line) =~ s/^.* fresh /fresh /;
+    # chomp($clean_line);
     my %entry = (
       file => shift(@args),
       line => shift(@args),
-      freshrc_line => $line,
+      freshrc_line => $clean_line,
     );
     my $cmd = shift(@args);
 
@@ -130,7 +159,8 @@ SH
       $entry{options} = {%default_options, %options};
       $entry{env} = {%env};
       undef %env;
-      push @entries, \%entry;
+      # push @entries, \%entry;
+      # return \%entry;
     } elsif ($cmd eq 'fresh-options') {
       croak "fresh-options cannot have args" unless (@args == 0);
       %default_options = %options;
@@ -141,6 +171,9 @@ SH
       croak "Unknown command: $cmd";
     }
 
+    # use Data::Dumper;
+    # print Dumper(\%entry);
+
     if (defined($entry{name}) && $entry{name} eq ".") {
       if (defined($options{file}) && $options{file} !~ /\/$/) {
         entry_error(\%entry, "Whole repositories require destination to be a directory.");
@@ -150,13 +183,7 @@ SH
         entry_error(\%entry, "Whole repositories can only be sourced in file mode.");
       }
     }
-  }
-  close $output_fh;
-
-  unlink $script_filename;
-  unlink $output_filename;
-
-  return @entries;
+  return %entry;
 }
 
 sub apply_filter {
@@ -545,6 +572,8 @@ EOF
     $prefix = "$repo_dir/";
   } else {
     $prefix = "$FRESH_LOCAL/";
+    # use Data::Dumper;
+    # print Dumper(\$entry);
     if ($$entry{name} eq ".") {
       fatal_error("Cannot source whole of local dotfiles.");
     }
@@ -1051,13 +1080,16 @@ sub confirm {
 }
 
 sub fresh_add {
-  my ($arg) = @_;
+  my $args = join('', @_);
 
-  my $line = "fresh ${\quotemeta($arg)}";
+  my $line = "fresh ${\quotemeta($args)}";
 
   if (confirm("Add `$line` to $FRESH_RCFILE")) {
     print "Adding `$line` to $FRESH_RCFILE...\n";
     append $FRESH_RCFILE, "$line\n";
+
+    #
+
     fresh_install;
   } else {
     note "Use `fresh edit` to manually edit your $FRESH_RCFILE."
@@ -1090,8 +1122,8 @@ sub main {
   } else {
     my $bin_name = "fresh-$arg";
 
-    if (-e "$FRESH_LOCAL/$arg") {
-      fresh_add($arg);
+    if ($arg =~ /\// || -e "$FRESH_LOCAL/$arg") {
+      fresh_add($arg, @ARGV);
     } else {
       if (system("which ${\quotemeta($bin_name)} > /dev/null 2> /dev/null") == 0) {
         exec($bin_name, @ARGV) or croak "$!";

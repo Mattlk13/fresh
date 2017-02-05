@@ -1799,7 +1799,7 @@ SH
     end
 
     it 'for new remotes' do
-      pending
+      pending # TODO
       rc 'fresh existing'
       touch fresh_local_path + 'existing'
       stub_git
