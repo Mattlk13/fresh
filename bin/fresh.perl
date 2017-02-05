@@ -612,6 +612,8 @@ sub get_entry_paths {
     } @paths;
   }
 
+  @paths = grep { basename($_) ne '.fresh-order' } @paths;
+
   return @paths;
 }
 
@@ -636,91 +638,89 @@ sub fresh_install {
     my $matched = 0;
 
     for my $path (@paths) {
-      unless ($path =~ /\/\.fresh-order$/) {
-        my $name = remove_prefix($path, $prefix);
+      my $name = remove_prefix($path, $prefix);
 
-        my ($build_name, $link_path, $marker);
+      my ($build_name, $link_path, $marker);
 
-        if (defined($$entry{options}{file})) {
-          $link_path = $$entry{options}{file} || '~/.' . (basename($name) =~ s/^\.//r);
-          $link_path =~ s{^~/}{$ENV{HOME}/};
-          $build_name = remove_prefix($link_path, $ENV{HOME}) =~ s/^\///r =~ s/^\.//r;
-          if ($is_external_target) {
-            $build_name = $build_name =~ s/(?<!^~)[\/ ()]+/-/gr =~ s/-$//r;
-          }
-          if ($is_dir_target) {
-            if ($$entry{name} eq ".") {
-              $build_name .= "/";
-            }
-            $build_name .= remove_prefix($name, $$entry{name});
-          }
-        } elsif (defined($$entry{options}{bin})) {
-          $link_path = $$entry{options}{bin} || '~/bin/' . basename($name);
-          $link_path =~ s{^~/}{$ENV{HOME}/};
-          if ($link_path !~ /^\//) {
-            entry_error $entry, '--bin file paths cannot be relative.';
-          }
-          $build_name = 'bin/' . basename($link_path);
-        } else {
-          $build_name = "shell.sh";
-          $marker = '#';
+      if (defined($$entry{options}{file})) {
+        $link_path = $$entry{options}{file} || '~/.' . (basename($name) =~ s/^\.//r);
+        $link_path =~ s{^~/}{$ENV{HOME}/};
+        $build_name = remove_prefix($link_path, $ENV{HOME}) =~ s/^\///r =~ s/^\.//r;
+        if ($is_external_target) {
+          $build_name = $build_name =~ s/(?<!^~)[\/ ()]+/-/gr =~ s/-$//r;
         }
-
-        if (defined($$entry{options}{marker})) {
-          $marker = $$entry{options}{marker} || '#';
+        if ($is_dir_target) {
+          if ($$entry{name} eq ".") {
+            $build_name .= "/";
+          }
+          $build_name .= remove_prefix($name, $$entry{name});
         }
-
-        my $data;
-        if ($$entry{options}{ref}) {
-          $data = read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$path");
-        } else {
-          $data = readfile($path);
+      } elsif (defined($$entry{options}{bin})) {
+        $link_path = $$entry{options}{bin} || '~/bin/' . basename($name);
+        $link_path =~ s{^~/}{$ENV{HOME}/};
+        if ($link_path !~ /^\//) {
+          entry_error $entry, '--bin file paths cannot be relative.';
         }
-        if (defined $data) {
-          $matched = 1;
+        $build_name = 'bin/' . basename($link_path);
+      } else {
+        $build_name = "shell.sh";
+        $marker = '#';
+      }
 
-          my $build_target = "$FRESH_PATH/build.new/$build_name";
-          if (!defined($$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK}) || $$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK} ne 'true') {
-            if (defined($$entry{options}{bin}) && -e $build_target) {
-              entry_note $entry, "Multiple sources concatenated into a single bin file.", <<EOF;
+      if (defined($$entry{options}{marker})) {
+        $marker = $$entry{options}{marker} || '#';
+      }
+
+      my $data;
+      if ($$entry{options}{ref}) {
+        $data = read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$path");
+      } else {
+        $data = readfile($path);
+      }
+      if (defined $data) {
+        $matched = 1;
+
+        my $build_target = "$FRESH_PATH/build.new/$build_name";
+        if (!defined($$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK}) || $$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK} ne 'true') {
+          if (defined($$entry{options}{bin}) && -e $build_target) {
+            entry_note $entry, "Multiple sources concatenated into a single bin file.", <<EOF;
 Typically bin files should not be concatenated together into one file.
 "$build_name" may not function as expected.
 
 To disable this warning, add `FRESH_NO_BIN_CONFLICT_CHECK=true` in your freshrc file.
 EOF
-            }
           }
+        }
 
-          my $filter = $$entry{options}{filter};
+        my $filter = $$entry{options}{filter};
+        if ($filter) {
+          $data = apply_filter($data, $filter);
+        }
+
+        if (defined($marker)) {
+          append $build_target, "\n" if -e $build_target;
+          append $build_target, "$marker fresh:";
+          if ($$entry{repo}) {
+            append $build_target, " $$entry{repo}";
+          }
+          append $build_target, " $name";
+          if ($$entry{options}{ref}) {
+            append $build_target, " @ $$entry{options}{ref}";
+          }
           if ($filter) {
-            $data = apply_filter($data, $filter);
+            append $build_target, " # $filter";
           }
+          append $build_target, "\n\n";
+        }
 
-          if (defined($marker)) {
-            append $build_target, "\n" if -e $build_target;
-            append $build_target, "$marker fresh:";
-            if ($$entry{repo}) {
-              append $build_target, " $$entry{repo}";
-            }
-            append $build_target, " $name";
-            if ($$entry{options}{ref}) {
-              append $build_target, " @ $$entry{options}{ref}";
-            }
-            if ($filter) {
-              append $build_target, " # $filter";
-            }
-            append $build_target, "\n\n";
-          }
+        append $build_target, $data;
 
-          append $build_target, $data;
+        if (defined($$entry{options}{bin})) {
+          chmod 0700, $build_target;
+        }
 
-          if (defined($$entry{options}{bin})) {
-            chmod 0700, $build_target;
-          }
-
-          if (defined($link_path) && !$is_dir_target) {
-            make_entry_link($entry, $link_path, "$FRESH_PATH/build/$build_name");
-          }
+        if (defined($link_path) && !$is_dir_target) {
+          make_entry_link($entry, $link_path, "$FRESH_PATH/build/$build_name");
         }
       }
     }
