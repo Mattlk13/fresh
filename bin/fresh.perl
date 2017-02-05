@@ -618,6 +618,35 @@ sub get_entry_paths {
   return @paths;
 }
 
+sub marker {
+  my ($entry, $name, $filter) = @_;
+  my $marker;
+
+  if (!defined($$entry{options}{file}) && !defined($$entry{options}{bin})) {
+    $marker = '#';
+  }
+
+  if (defined($$entry{options}{marker})) {
+    $marker = $$entry{options}{marker} || '#';
+  }
+
+  if (defined($marker)) {
+    $marker .= " fresh:";
+    if ($$entry{repo}) {
+      $marker .= " $$entry{repo}";
+    }
+    $marker .= " $name";
+    if ($$entry{options}{ref}) {
+      $marker .= " @ $$entry{options}{ref}";
+    }
+    if ($filter) {
+      $marker .= " # $filter";
+    }
+  }
+
+  return $marker;
+}
+
 sub fresh_install {
   umask 0077;
   remove_tree "$FRESH_PATH/build.new";
@@ -641,7 +670,7 @@ sub fresh_install {
     for my $path (@paths) {
       my $name = remove_prefix($path, $prefix);
 
-      my ($build_name, $link_path, $marker);
+      my ($build_name, $link_path);
 
       if (defined($$entry{options}{file})) {
         $link_path = $$entry{options}{file} || '~/.' . (basename($name) =~ s/^\.//r);
@@ -665,11 +694,6 @@ sub fresh_install {
         $build_name = 'bin/' . basename($link_path);
       } else {
         $build_name = "shell.sh";
-        $marker = '#';
-      }
-
-      if (defined($$entry{options}{marker})) {
-        $marker = $$entry{options}{marker} || '#';
       }
 
       my $data;
@@ -698,22 +722,11 @@ EOF
           $data = apply_filter($data, $filter);
         }
 
+        my $marker = marker($entry, $name, $filter);
         if (defined($marker)) {
           append $build_target, "\n" if -e $build_target;
-          append $build_target, "$marker fresh:";
-          if ($$entry{repo}) {
-            append $build_target, " $$entry{repo}";
-          }
-          append $build_target, " $name";
-          if ($$entry{options}{ref}) {
-            append $build_target, " @ $$entry{options}{ref}";
-          }
-          if ($filter) {
-            append $build_target, " # $filter";
-          }
-          append $build_target, "\n\n";
+          append $build_target, "$marker\n\n"
         }
-
         append $build_target, $data;
 
         if (defined($$entry{options}{bin})) {
