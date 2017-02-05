@@ -79,12 +79,14 @@ SH
   while (my $line = <$output_fh>) {
     my @args = shellwords($line);
 
-    my %entry = parse_fresh_dsl_args($line, @args);
+    my $entry = parse_fresh_dsl_args(\%env, \%default_options, $line, @args);
 
     # use Data::Dumper;
-    # print Dumper(\%entry);
+    # print Dumper($entry);
 
-    push @entries, \%entry;
+    if ($entry) {
+      push @entries, $entry;
+    }
   }
   close $output_fh;
 
@@ -95,10 +97,8 @@ SH
 }
 
 sub parse_fresh_dsl_args {
-  my ($line, @args) = @_;
+  my ($env, $default_options, $line, @args) = @_;
 
-  my %default_options;
-  my %env;
   # print "x\n";
   # use Data::Dumper;
   # print Dumper(\@args);
@@ -156,17 +156,28 @@ sub parse_fresh_dsl_args {
       } else {
         entry_error(\%entry, "Expected 1 or 2 args.");
       }
-      $entry{options} = {%default_options, %options};
-      $entry{env} = {%env};
-      undef %env;
-      # push @entries, \%entry;
-      # return \%entry;
+      $entry{options} = {%$default_options, %options};
+
+      $entry{env} = {%$env};
+      undef %{$env};
+
+      if (defined($entry{name}) && $entry{name} eq ".") {
+        if (defined($options{file}) && $options{file} !~ /\/$/) {
+          entry_error(\%entry, "Whole repositories require destination to be a directory.");
+        }
+
+        if (!defined($options{file})) {
+          entry_error(\%entry, "Whole repositories can only be sourced in file mode.");
+        }
+      }
+
+      return \%entry;
     } elsif ($cmd eq 'fresh-options') {
       croak "fresh-options cannot have args" unless (@args == 0);
-      %default_options = %options;
+      %$default_options = %options;
     } elsif ($cmd eq 'env') {
       croak 'expected env to have 2 args' unless @args == 2;
-      $env{$args[0]} = $args[1];
+      $$env{$args[0]} = $args[1];
     } else {
       croak "Unknown command: $cmd";
     }
@@ -174,16 +185,7 @@ sub parse_fresh_dsl_args {
     # use Data::Dumper;
     # print Dumper(\%entry);
 
-    if (defined($entry{name}) && $entry{name} eq ".") {
-      if (defined($options{file}) && $options{file} !~ /\/$/) {
-        entry_error(\%entry, "Whole repositories require destination to be a directory.");
-      }
-
-      if (!defined($options{file})) {
-        entry_error(\%entry, "Whole repositories can only be sourced in file mode.");
-      }
-    }
-  return %entry;
+  return undef;
 }
 
 sub apply_filter {
