@@ -1884,7 +1884,6 @@ SH
     end
 
     it 'does not add lines to freshrc if declined' do
-      pending
       rc 'fresh existing'
       touch fresh_local_path + 'existing'
       touch fresh_local_path + 'new'
@@ -1967,7 +1966,6 @@ SH
 
     describe 'confirmation prompt' do
       it 'negative' do
-        pending
         touch fresh_path + 'source/user/repo/file'
         touch fresh_local_path + 'new file'
 
@@ -1991,7 +1989,6 @@ SH
       end
 
       it 'invalid' do
-        pending
         touch fresh_path + 'source/user/repo/file'
         touch fresh_local_path + 'new file'
 

@@ -1034,16 +1034,34 @@ EOF
   }
 }
 
+sub confirm {
+  my ($question) = @_;
+
+  print "$question [Y/n]? ";
+  my $answer = <STDIN> || "";
+  chomp($answer);
+
+  if ($answer eq "Y" || $answer eq "y" || $answer eq "") {
+    return 1;
+  } elsif ($answer eq "N" || $answer eq "n") {
+    return 0;
+  } else {
+    confirm($question);
+  }
+}
+
 sub fresh_add {
   my ($arg) = @_;
 
   my $line = "fresh ${\quotemeta($arg)}";
 
-  print "Add `$line` to $FRESH_RCFILE [Y/n]? ";
-  print "Adding `$line` to $FRESH_RCFILE...\n";
-
-  append $FRESH_RCFILE, "$line\n";
-  fresh_install;
+  if (confirm("Add `$line` to $FRESH_RCFILE")) {
+    print "Adding `$line` to $FRESH_RCFILE...\n";
+    append $FRESH_RCFILE, "$line\n";
+    fresh_install;
+  } else {
+    note "Use `fresh edit` to manually edit your $FRESH_RCFILE."
+  }
 }
 
 sub main {
