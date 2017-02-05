@@ -619,7 +619,7 @@ sub get_entry_paths {
 }
 
 sub marker {
-  my ($entry, $name, $filter) = @_;
+  my ($entry, $name) = @_;
   my $marker;
 
   if (!defined($$entry{options}{file}) && !defined($$entry{options}{bin})) {
@@ -639,12 +639,44 @@ sub marker {
     if ($$entry{options}{ref}) {
       $marker .= " @ $$entry{options}{ref}";
     }
+    my $filter = $$entry{options}{filter};
     if ($filter) {
       $marker .= " # $filter";
     }
   }
 
   return $marker;
+}
+
+sub file_contents {
+  my ($entry, $prefix, $path, $build_target, $build_name) = @_;
+  my $data;
+
+  if ($$entry{options}{ref}) {
+    $data = read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$path");
+  } else {
+    $data = readfile($path);
+  }
+
+  if (defined $data) {
+    if (!defined($$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK}) || $$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK} ne 'true') {
+      if (defined($$entry{options}{bin}) && -e $build_target) {
+        entry_note $entry, "Multiple sources concatenated into a single bin file.", <<EOF;
+Typically bin files should not be concatenated together into one file.
+"$build_name" may not function as expected.
+
+To disable this warning, add `FRESH_NO_BIN_CONFLICT_CHECK=true` in your freshrc file.
+EOF
+      }
+    }
+
+    my $filter = $$entry{options}{filter};
+    if ($filter) {
+      $data = apply_filter($data, $filter);
+    }
+  }
+
+  return $data;
 }
 
 sub fresh_install {
@@ -696,33 +728,13 @@ sub fresh_install {
         $build_name = "shell.sh";
       }
 
-      my $data;
-      if ($$entry{options}{ref}) {
-        $data = read_cwd_cmd($prefix, 'git', 'show', "$$entry{options}{ref}:$path");
-      } else {
-        $data = readfile($path);
-      }
+      my $build_target = "$FRESH_PATH/build.new/$build_name";
+      my $data = file_contents($entry, $prefix, $path, $build_target, $build_name);
+
       if (defined $data) {
         $matched = 1;
 
-        my $build_target = "$FRESH_PATH/build.new/$build_name";
-        if (!defined($$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK}) || $$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK} ne 'true') {
-          if (defined($$entry{options}{bin}) && -e $build_target) {
-            entry_note $entry, "Multiple sources concatenated into a single bin file.", <<EOF;
-Typically bin files should not be concatenated together into one file.
-"$build_name" may not function as expected.
-
-To disable this warning, add `FRESH_NO_BIN_CONFLICT_CHECK=true` in your freshrc file.
-EOF
-          }
-        }
-
-        my $filter = $$entry{options}{filter};
-        if ($filter) {
-          $data = apply_filter($data, $filter);
-        }
-
-        my $marker = marker($entry, $name, $filter);
+        my $marker = marker($entry, $name);
         if (defined($marker)) {
           append $build_target, "\n" if -e $build_target;
           append $build_target, "$marker\n\n"
