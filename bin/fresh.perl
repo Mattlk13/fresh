@@ -9,7 +9,7 @@ use warnings FATAL => 'all';
 
 use Carp qw(croak);
 use File::Temp qw(tempfile);
-use Text::ParseWords qw(shellwords);
+use Text::ParseWords qw(shellwords quotewords);
 use Getopt::Long qw(GetOptionsFromArray :config posix_default permute no_ignore_case pass_through);
 use File::Path qw(make_path remove_tree);
 use File::Glob qw(bsd_glob);
@@ -78,11 +78,16 @@ SH
 
   while (my $line = <$output_fh>) {
     my @args = shellwords($line);
-    $line =~ s/^.* fresh /fresh /;
+
+    my @quoted_args = quotewords(' ', 1, $line);
+    shift(@quoted_args);
+    shift(@quoted_args);
+    my $freshrc_line = join(' ', @quoted_args);
+
     my %entry = (
       file => shift(@args),
       line => shift(@args),
-      freshrc_line => $line,
+      freshrc_line => $freshrc_line,
     );
     my $cmd = shift(@args);
 
@@ -956,8 +961,6 @@ sub fresh_show {
   for my $entry (read_freshrc()) {
     print "\n" if ($count >= 1);
 
-    # TODO: This used to run through the _escape function.
-    # I think it's okay now because it's just a string...
     print $$entry{freshrc_line};
 
     my $prefix = get_entry_prefix($entry);
