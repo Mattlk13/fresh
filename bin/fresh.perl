@@ -1037,7 +1037,8 @@ sub confirm {
   my ($question) = @_;
 
   print "$question [Y/n]? ";
-  my $answer = <STDIN> || "";
+  my $answer = <STDIN>;
+  exit 1 unless defined($answer);
   chomp($answer);
 
   if ($answer eq "Y" || $answer eq "y" || $answer eq "") {
