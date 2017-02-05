@@ -78,9 +78,11 @@ SH
 
   while (my $line = <$output_fh>) {
     my @args = shellwords($line);
+    $line =~ s/^.* fresh /fresh /;
     my %entry = (
       file => shift(@args),
       line => shift(@args),
+      freshrc_line => $line,
     );
     my $cmd = shift(@args);
 
@@ -924,6 +926,55 @@ sub fresh_edit {
   exec($ENV{EDITOR} || 'vi', $rcfile) == 0 or exit(1);
 }
 
+sub github_blob_url {
+  my ($repo_name, $ref, $blob_path) = @_;
+  return "https://github.com/$repo_name/blob/$ref/$blob_path";
+}
+
+sub source_file_url {
+  my ($entry, $path) = @_;
+
+  my $repo = $$entry{repo};
+  my $ref = $$entry{options}{ref};
+
+  if (defined($repo)) {
+    if ($repo =~ /:/) {
+      return repo_url($repo);
+    } elsif (defined($ref)) {
+      return github_blob_url($repo, $ref, $path)
+    } else {
+      my $prefix = get_entry_prefix($entry);
+      my $file = remove_prefix($path, $prefix);
+      $ref = read_cwd_cmd($prefix, "git", "log", "--pretty=%H", "-n", "1", "--", $file);
+      chomp($ref);
+      return github_blob_url($repo, $ref, $file);
+    }
+  } else {
+    return $path;
+  }
+}
+
+sub fresh_show {
+  my $count = 0;
+
+  for my $entry (read_freshrc()) {
+    print "\n" if ($count >= 1);
+
+    # TODO: This used to run through the _escape function.
+    # I think it's okay now because it's just a string...
+    print $$entry{freshrc_line};
+
+    my $prefix = get_entry_prefix($entry);
+    my @paths = get_entry_paths($entry, $prefix);
+    foreach my $path (@paths) {
+      my $url = source_file_url($entry, $path);
+      print "<${\format_url($url)}>\n";
+    }
+
+    $count++;
+  }
+}
+
 sub fresh_clean {
   fresh_clean_symlinks($ENV{HOME});
   fresh_clean_symlinks("$ENV{HOME}/bin");
@@ -995,6 +1046,9 @@ sub main {
   } elsif ($arg eq "edit") {
     # TODO: should error if passed any args
     fresh_edit;
+  } elsif ($arg eq "show") {
+    # TODO: should error if passed any args
+    fresh_show;
   } elsif ($arg eq "clean") {
     # TODO: should error if passed any args
     fresh_clean;

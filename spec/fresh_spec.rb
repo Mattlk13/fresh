@@ -1735,7 +1735,6 @@ SH
 
   describe 'show' do
     it 'shows sources for fresh lines' do
-      pending
       rc <<-EOF
         fresh foo/bar aliases/*
         fresh foo/bar sedmv --bin --ref=abc123
@@ -1769,7 +1768,6 @@ SH
     end
 
     it 'shows git urls for non github repos' do
-      pending
       rc 'fresh git://example.com/one/two.git file'
       stub_git
 
