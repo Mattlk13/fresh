@@ -649,7 +649,7 @@ sub marker {
 }
 
 sub file_contents {
-  my ($entry, $prefix, $path, $build_target, $build_name) = @_;
+  my ($entry, $prefix, $path) = @_;
   my $data;
 
   if ($$entry{options}{ref}) {
@@ -659,17 +659,6 @@ sub file_contents {
   }
 
   if (defined $data) {
-    if (!defined($$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK}) || $$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK} ne 'true') {
-      if (defined($$entry{options}{bin}) && -e $build_target) {
-        entry_note $entry, "Multiple sources concatenated into a single bin file.", <<EOF;
-Typically bin files should not be concatenated together into one file.
-"$build_name" may not function as expected.
-
-To disable this warning, add `FRESH_NO_BIN_CONFLICT_CHECK=true` in your freshrc file.
-EOF
-      }
-    }
-
     my $filter = $$entry{options}{filter};
     if ($filter) {
       $data = apply_filter($data, $filter);
@@ -729,10 +718,21 @@ sub fresh_install {
       }
 
       my $build_target = "$FRESH_PATH/build.new/$build_name";
-      my $data = file_contents($entry, $prefix, $path, $build_target, $build_name);
+      my $data = file_contents($entry, $prefix, $path);
 
       if (defined $data) {
         $matched = 1;
+
+        if (!defined($$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK}) || $$entry{env}{FRESH_NO_BIN_CONFLICT_CHECK} ne 'true') {
+          if (defined($$entry{options}{bin}) && -e $build_target) {
+            entry_note $entry, "Multiple sources concatenated into a single bin file.", <<EOF;
+Typically bin files should not be concatenated together into one file.
+"$build_name" may not function as expected.
+
+To disable this warning, add `FRESH_NO_BIN_CONFLICT_CHECK=true` in your freshrc file.
+EOF
+          }
+        }
 
         my $marker = marker($entry, $name);
         if (defined($marker)) {
