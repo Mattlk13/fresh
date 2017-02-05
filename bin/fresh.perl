@@ -803,6 +803,10 @@ sub fresh_install_with_latest_binary {
         last;
       }
     }
+
+    if (defined($fresh_bin_filename)) {
+      last;
+    }
   }
 
   if (defined($fresh_bin_filename)) {
