@@ -1428,7 +1428,6 @@ describe 'fresh' do
     end
 
     it 'builds after update with latest binary' do
-      pending
       rc 'fresh bin/\* --bin'
       file_add fresh_local_path + 'bin/fresh', 'echo new >> "$SANDBOX_PATH/fresh.log"'
       file_add fresh_local_path + 'bin/other', 'echo bad >> "$SANDBOX_PATH/fresh.log"'

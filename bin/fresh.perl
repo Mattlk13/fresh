@@ -788,6 +788,32 @@ EOF
   print "Your dot files are now \033[1;32mfresh\033[0m.\n"
 }
 
+sub fresh_install_with_latest_binary {
+  my ($fresh_bin_fh, $fresh_bin_filename);
+
+  for my $entry (read_freshrc()) {
+    my $prefix = get_entry_prefix($entry);
+    my @paths = get_entry_paths($entry, $prefix);
+
+    foreach my $path (@paths) {
+      if (basename($path) eq "fresh") {
+        ($fresh_bin_fh, $fresh_bin_filename) = tempfile('fresh.XXXXXX', TMPDIR => 1, UNLINK => 1);
+        print $fresh_bin_fh file_contents($entry, $prefix, $path);
+        close $fresh_bin_fh;
+        last;
+      }
+    }
+  }
+
+  if (defined($fresh_bin_filename)) {
+    chmod 0700, $fresh_bin_filename;
+    system($fresh_bin_filename);
+    unlink $fresh_bin_filename;
+  } else {
+    fresh_install;
+  }
+}
+
 sub update_repo {
   my ($path, $repo_display_name, $log_file) = @_;
 
@@ -958,7 +984,7 @@ sub main {
 
   if ($arg eq "update") {
     fresh_update(@ARGV);
-    fresh_install; # TODO: With latest binary
+    fresh_install_with_latest_binary;
   } elsif ($arg eq "install") {
     # TODO: should error if passed any args
     fresh_install;
