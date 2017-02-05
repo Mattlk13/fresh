@@ -556,6 +556,7 @@ sub get_entry_paths {
 
   my @paths;
 
+  # TODO: Should we DRY these up?
   my $is_dir_target = defined($$entry{options}{file}) && $$entry{options}{file} =~ /\/$/;
   my $is_external_target = defined($$entry{options}{file}) && $$entry{options}{file} =~ /^[\/~]/;
 
