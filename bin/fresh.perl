@@ -790,28 +790,24 @@ EOF
   print "Your dot files are now \033[1;32mfresh\033[0m.\n"
 }
 
-sub fresh_install_with_latest_binary {
-  my ($fresh_bin_fh, $fresh_bin_filename);
-
+sub latest_binary_content {
   for my $entry (read_freshrc()) {
     my $prefix = get_entry_prefix($entry);
     my @paths = get_entry_paths($entry, $prefix);
 
     foreach my $path (@paths) {
       if (defined($$entry{options}{bin}) && basename($path) eq "fresh") {
-        ($fresh_bin_fh, $fresh_bin_filename) = tempfile('fresh.XXXXXX', TMPDIR => 1, UNLINK => 1);
-        print $fresh_bin_fh file_contents($entry, $prefix, $path);
-        close $fresh_bin_fh;
-        last;
+        return file_contents($entry, $prefix, $path);
       }
     }
-
-    if (defined($fresh_bin_filename)) {
-      last;
-    }
   }
+}
 
-  if (defined($fresh_bin_filename)) {
+sub fresh_install_with_latest_binary {
+  if (my $content = latest_binary_content()) {
+    my ($fresh_bin_fh, $fresh_bin_filename) = tempfile('fresh.XXXXXX', TMPDIR => 1, UNLINK => 1);
+    print $fresh_bin_fh $content;
+    close $fresh_bin_fh;
     chmod 0700, $fresh_bin_filename;
     system($fresh_bin_filename);
     unlink $fresh_bin_filename;
