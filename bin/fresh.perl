@@ -796,7 +796,7 @@ sub fresh_install_with_latest_binary {
     my @paths = get_entry_paths($entry, $prefix);
 
     foreach my $path (@paths) {
-      if (basename($path) eq "fresh") {
+      if (defined($$entry{options}{bin}) && basename($path) eq "fresh") {
         ($fresh_bin_fh, $fresh_bin_filename) = tempfile('fresh.XXXXXX', TMPDIR => 1, UNLINK => 1);
         print $fresh_bin_fh file_contents($entry, $prefix, $path);
         close $fresh_bin_fh;
