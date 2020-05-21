@@ -1,5 +1,5 @@
 source 'https://rubygems.org'
 
 gem 'rspec'
-gem 'activesupport', '~> 4.1.0'
+gem 'activesupport', '~> 5.2.4', '>= 5.2.4.3'
 gem 'pry'
